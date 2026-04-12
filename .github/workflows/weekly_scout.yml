@@ -18,27 +18,9 @@ jobs:
       - name: Install dependencies
         run: pip install anthropic --index-url https://pypi.org/simple/ --trusted-host pypi.org
 
-      - name: Run scout
+      - name: Run scout and send email
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GMAIL_USERNAME: ${{ secrets.GMAIL_USERNAME }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
         run: python scout.py --days 7
-
-      - name: Send email
-        uses: dawidd6/action-send-mail@v3
-        with:
-          server_address: smtp.gmail.com
-          server_port: 465
-          username: ${{ secrets.GMAIL_USERNAME }}
-          password: ${{ secrets.GMAIL_APP_PASSWORD }}
-          subject: "CapitalG Scout — Weekly Report"
-          to: ${{ secrets.GMAIL_USERNAME }}
-          from: CapitalG Scout
-          html_body: ${{ steps.read.outputs.html }}
-
-      - name: Read HTML
-        id: read
-        run: |
-          HTML=$(cat report.html)
-          echo "html<<EOF" >> $GITHUB_OUTPUT
-          echo "$HTML" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
