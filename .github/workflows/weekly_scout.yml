@@ -1,0 +1,37 @@
+name: Weekly CapitalG Scout
+
+on:
+  schedule:
+    - cron: "0 22 * * 0"
+  workflow_dispatch:
+
+jobs:
+  run-scout:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install anthropic --index-url https://pypi.org/simple/ --trusted-host pypi.org
+
+      - name: Run scout
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: python scout.py --days 7 > report.txt
+
+      - name: Send email
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          username: ${{ secrets.GMAIL_USERNAME }}
+          password: ${{ secrets.GMAIL_APP_PASSWORD }}
+          subject: "CapitalG Scout — Weekly Report"
+          to: ${{ secrets.GMAIL_USERNAME }}
+          from: CapitalG Scout
+          body: "Your weekly CapitalG Scout report is attached."
+          attachments: report.txt
