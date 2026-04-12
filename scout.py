@@ -2,7 +2,11 @@ import anthropic
 import argparse
 import json
 import re
+import smtplib
+import os
 from datetime import date
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 
 MODEL = "claude-sonnet-4-6"
 
@@ -133,50 +137,65 @@ def format_html(people):
     rows = ""
     for p in people:
         google = p.get("google_tie", "None found")
-        google_color = "#e6f4ea" if google != "None found" else "#f8f9fa"
-        rows += f"""
-        <tr>
-          <td style="padding:12px;border-bottom:1px solid #e0e0e0;font-weight:600;">{p.get("name","")}</td>
-          <td style="padding:12px;border-bottom:1px solid #e0e0e0;">{p.get("title","")}</td>
-          <td style="padding:12px;border-bottom:1px solid #e0e0e0;">{p.get("company","")}</td>
-          <td style="padding:12px;border-bottom:1px solid #e0e0e0;">{p.get("vertical","")}</td>
-          <td style="padding:12px;border-bottom:1px solid #e0e0e0;background:{google_color};">{google}</td>
-          <td style="padding:12px;border-bottom:1px solid #e0e0e0;">{p.get("signal","")}</td>
-        </tr>"""
+        google_bg = "#e6f4ea" if google.lower() != "none found" else "#ffffff"
+        rows += f"""<tr>
+<td style="padding:12px 16px;border-bottom:1px solid #e0e0e0;font-weight:600;white-space:nowrap;">{p.get("name","")}</td>
+<td style="padding:12px 16px;border-bottom:1px solid #e0e0e0;">{p.get("title","")}</td>
+<td style="padding:12px 16px;border-bottom:1px solid #e0e0e0;white-space:nowrap;">{p.get("company","")}</td>
+<td style="padding:12px 16px;border-bottom:1px solid #e0e0e0;">{p.get("vertical","")}</td>
+<td style="padding:12px 16px;border-bottom:1px solid #e0e0e0;background:{google_bg};">{google}</td>
+<td style="padding:12px 16px;border-bottom:1px solid #e0e0e0;">{p.get("signal","")}</td>
+</tr>"""
 
-    html = f"""<!DOCTYPE html>
+    return f"""<!DOCTYPE html>
 <html>
-<head><meta charset="utf-8"></head>
-<body style="font-family:Arial,sans-serif;max-width:1000px;margin:0 auto;padding:20px;color:#333;">
+<head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+</head>
+<body style="margin:0;padding:0;background:#f4f4f4;font-family:Arial,sans-serif;">
+<div style="max-width:960px;margin:24px auto;background:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.1);">
 
-  <div style="background:#1a73e8;padding:20px 24px;border-radius:8px;margin-bottom:24px;">
-    <h1 style="color:white;margin:0;font-size:20px;">CapitalG Scout</h1>
-    <p style="color:#e8f0fe;margin:4px 0 0;">{today} &nbsp;&middot;&nbsp; {len(people)} targets this week</p>
+  <div style="background:#1a73e8;padding:24px 32px;">
+    <h1 style="margin:0;color:#ffffff;font-size:22px;font-weight:600;">CapitalG Scout</h1>
+    <p style="margin:6px 0 0;color:#e8f0fe;font-size:14px;">{today} &nbsp;&middot;&nbsp; {len(people)} targets this week</p>
   </div>
 
-  <table style="width:100%;border-collapse:collapse;font-size:14px;">
-    <thead>
-      <tr style="background:#f1f3f4;">
-        <th style="padding:12px;text-align:left;border-bottom:2px solid #e0e0e0;">Name</th>
-        <th style="padding:12px;text-align:left;border-bottom:2px solid #e0e0e0;">Title</th>
-        <th style="padding:12px;text-align:left;border-bottom:2px solid #e0e0e0;">Company</th>
-        <th style="padding:12px;text-align:left;border-bottom:2px solid #e0e0e0;">Vertical</th>
-        <th style="padding:12px;text-align:left;border-bottom:2px solid #e0e0e0;">Google Tie</th>
-        <th style="padding:12px;text-align:left;border-bottom:2px solid #e0e0e0;">Signal</th>
-      </tr>
-    </thead>
-    <tbody>{rows}
-    </tbody>
-  </table>
+  <div style="padding:24px 32px;overflow-x:auto;">
+    <table style="width:100%;border-collapse:collapse;font-size:14px;color:#333;">
+      <thead>
+        <tr style="background:#f8f9fa;">
+          <th style="padding:12px 16px;text-align:left;border-bottom:2px solid #e0e0e0;white-space:nowrap;">Name</th>
+          <th style="padding:12px 16px;text-align:left;border-bottom:2px solid #e0e0e0;">Title</th>
+          <th style="padding:12px 16px;text-align:left;border-bottom:2px solid #e0e0e0;">Company</th>
+          <th style="padding:12px 16px;text-align:left;border-bottom:2px solid #e0e0e0;">Vertical</th>
+          <th style="padding:12px 16px;text-align:left;border-bottom:2px solid #e0e0e0;">Google Tie</th>
+          <th style="padding:12px 16px;text-align:left;border-bottom:2px solid #e0e0e0;">Signal</th>
+        </tr>
+      </thead>
+      <tbody>{rows}</tbody>
+    </table>
+  </div>
 
-  <p style="color:#999;font-size:12px;margin-top:24px;">
-    Sent automatically every Sunday by CapitalG Scout.
-  </p>
+  <div style="padding:16px 32px;border-top:1px solid #e0e0e0;background:#f8f9fa;">
+    <p style="margin:0;color:#999;font-size:12px;">Sent automatically every Sunday by CapitalG Scout.</p>
+  </div>
 
+</div>
 </body>
 </html>"""
 
-    return html
+
+def send_email(html, gmail_user, gmail_password):
+    msg = MIMEMultipart("alternative")
+    msg["Subject"] = f"CapitalG Scout — Weekly Report"
+    msg["From"] = f"CapitalG Scout <{gmail_user}>"
+    msg["To"] = gmail_user
+    msg.attach(MIMEText(html, "html"))
+
+    with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
+        server.login(gmail_user, gmail_password)
+        server.sendmail(gmail_user, gmail_user, msg.as_string())
+    print("Email sent successfully.")
 
 
 def main():
@@ -185,14 +204,21 @@ def main():
     args = parser.parse_args()
 
     people = run_scout(days=args.days)
-
     html = format_html(people)
-    with open("report.html", "w") as f:
-        f.write(html)
 
     print(f"\n{len(people)} targets found.")
     for i, p in enumerate(people, 1):
         print(f"  {i:02d}. {p.get('name')} — {p.get('title')} at {p.get('company')}")
+
+    # Send email directly via Gmail SMTP
+    gmail_user = os.environ.get("GMAIL_USERNAME")
+    gmail_password = os.environ.get("GMAIL_APP_PASSWORD")
+    if gmail_user and gmail_password:
+        send_email(html, gmail_user, gmail_password)
+    else:
+        print("No email credentials found — saving report.html instead.")
+        with open("report.html", "w") as f:
+            f.write(html)
 
 
 if __name__ == "__main__":
