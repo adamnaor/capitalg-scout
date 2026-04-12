@@ -23,6 +23,13 @@ jobs:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: python scout.py --days 7 > report.txt
 
+      - name: Read report
+        id: report
+        run: |
+          echo "body<<EOF" >> $GITHUB_OUTPUT
+          cat report.txt >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
       - name: Send email
         uses: dawidd6/action-send-mail@v3
         with:
@@ -33,5 +40,4 @@ jobs:
           subject: "CapitalG Scout — Weekly Report"
           to: ${{ secrets.GMAIL_USERNAME }}
           from: CapitalG Scout
-          body: "Your weekly CapitalG Scout report is attached."
-          attachments: report.txt
+          body: ${{ steps.report.outputs.body }}
