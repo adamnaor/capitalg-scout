@@ -33,4 +33,12 @@ jobs:
           subject: "CapitalG Scout — Weekly Report"
           to: ${{ secrets.GMAIL_USERNAME }}
           from: CapitalG Scout
-          html_body: file://report.html
+          html_body: ${{ steps.read.outputs.html }}
+
+      - name: Read HTML
+        id: read
+        run: |
+          HTML=$(cat report.html)
+          echo "html<<EOF" >> $GITHUB_OUTPUT
+          echo "$HTML" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
