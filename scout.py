@@ -41,7 +41,6 @@ Start with [ and end with ]. No text before or after. No markdown fences.
   }
 ]"""
 
-
 SEARCHES = [
     "VP SVP CDO CTO engineering data AI energy telecom automotive conference speaker 2026",
     "NVIDIA GTC Google Cloud Next HumanX Databricks VP SVP enterprise speaker 2026",
@@ -91,7 +90,6 @@ No preamble. No explanation. No markdown."""
                 if hasattr(block, "text")
             ).strip()
 
-            # Extract JSON array from anywhere in the response
             start = raw.find("[")
             end = raw.rfind("]")
             if start != -1 and end != -1 and end > start:
@@ -99,7 +97,6 @@ No preamble. No explanation. No markdown."""
                 try:
                     return json.loads(json_str)
                 except json.JSONDecodeError:
-                    # Pull out individual complete objects if full parse fails
                     people = []
                     for match in re.finditer(r'\{[^{}]+\}', json_str, re.DOTALL):
                         try:
@@ -130,32 +127,72 @@ No preamble. No explanation. No markdown."""
             raise RuntimeError(f"Unexpected stop_reason: {response.stop_reason}")
 
 
-def format_report(people):
+def format_html(people):
     today = date.today().strftime("%B %d, %Y")
-    lines = []
-    lines.append(f"CAPITALG SCOUT — {today}")
-    lines.append(f"{len(people)} targets this week")
-    lines.append("=" * 50)
-    lines.append("")
 
-    for i, p in enumerate(people, 1):
-        lines.append(f"{i:02d}. {p.get('name', '')}")
-        lines.append(f"    Role:     {p.get('title', '')} at {p.get('company', '')}")
-        lines.append(f"    Vertical: {p.get('vertical', '')}")
-        lines.append(f"    Google:   {p.get('google_tie', 'None found')}")
-        lines.append(f"    Signal:   {p.get('signal', '')}")
-        lines.append("")
+    rows = ""
+    for p in people:
+        google = p.get("google_tie", "None found")
+        google_color = "#e6f4ea" if google != "None found" else "#f8f9fa"
+        rows += f"""
+        <tr>
+          <td style="padding:12px;border-bottom:1px solid #e0e0e0;font-weight:600;">{p.get("name","")}</td>
+          <td style="padding:12px;border-bottom:1px solid #e0e0e0;">{p.get("title","")}</td>
+          <td style="padding:12px;border-bottom:1px solid #e0e0e0;">{p.get("company","")}</td>
+          <td style="padding:12px;border-bottom:1px solid #e0e0e0;">{p.get("vertical","")}</td>
+          <td style="padding:12px;border-bottom:1px solid #e0e0e0;background:{google_color};">{google}</td>
+          <td style="padding:12px;border-bottom:1px solid #e0e0e0;">{p.get("signal","")}</td>
+        </tr>"""
 
-    lines.append("=" * 50)
-    return "\n".join(lines)
+    html = f"""<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"></head>
+<body style="font-family:Arial,sans-serif;max-width:1000px;margin:0 auto;padding:20px;color:#333;">
+
+  <div style="background:#1a73e8;padding:20px 24px;border-radius:8px;margin-bottom:24px;">
+    <h1 style="color:white;margin:0;font-size:20px;">CapitalG Scout</h1>
+    <p style="color:#e8f0fe;margin:4px 0 0;">{today} &nbsp;&middot;&nbsp; {len(people)} targets this week</p>
+  </div>
+
+  <table style="width:100%;border-collapse:collapse;font-size:14px;">
+    <thead>
+      <tr style="background:#f1f3f4;">
+        <th style="padding:12px;text-align:left;border-bottom:2px solid #e0e0e0;">Name</th>
+        <th style="padding:12px;text-align:left;border-bottom:2px solid #e0e0e0;">Title</th>
+        <th style="padding:12px;text-align:left;border-bottom:2px solid #e0e0e0;">Company</th>
+        <th style="padding:12px;text-align:left;border-bottom:2px solid #e0e0e0;">Vertical</th>
+        <th style="padding:12px;text-align:left;border-bottom:2px solid #e0e0e0;">Google Tie</th>
+        <th style="padding:12px;text-align:left;border-bottom:2px solid #e0e0e0;">Signal</th>
+      </tr>
+    </thead>
+    <tbody>{rows}
+    </tbody>
+  </table>
+
+  <p style="color:#999;font-size:12px;margin-top:24px;">
+    Sent automatically every Sunday by CapitalG Scout.
+  </p>
+
+</body>
+</html>"""
+
+    return html
 
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--days", "-d", type=int, default=30)
     args = parser.parse_args()
+
     people = run_scout(days=args.days)
-    print(format_report(people))
+
+    html = format_html(people)
+    with open("report.html", "w") as f:
+        f.write(html)
+
+    print(f"\n{len(people)} targets found.")
+    for i, p in enumerate(people, 1):
+        print(f"  {i:02d}. {p.get('name')} — {p.get('title')} at {p.get('company')}")
 
 
 if __name__ == "__main__":
