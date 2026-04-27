@@ -134,53 +134,126 @@ No preamble. No explanation. No markdown."""
 def format_html(people):
     today = date.today().strftime("%B %d, %Y")
 
-    rows = ""
+    # Group people by vertical
+    verticals = {}
     for p in people:
-        google = p.get("google_tie", "None found")
-        google_bg = "#e6f4ea" if google.lower() != "none found" else "#ffffff"
-        rows += f"""<tr>
-<td style="padding:12px 16px;border-bottom:1px solid #e0e0e0;font-weight:600;white-space:nowrap;">{p.get("name","")}</td>
-<td style="padding:12px 16px;border-bottom:1px solid #e0e0e0;">{p.get("title","")}</td>
-<td style="padding:12px 16px;border-bottom:1px solid #e0e0e0;white-space:nowrap;">{p.get("company","")}</td>
-<td style="padding:12px 16px;border-bottom:1px solid #e0e0e0;">{p.get("vertical","")}</td>
-<td style="padding:12px 16px;border-bottom:1px solid #e0e0e0;background:{google_bg};">{google}</td>
-<td style="padding:12px 16px;border-bottom:1px solid #e0e0e0;">{p.get("signal","")}</td>
-</tr>"""
+        v = p.get("vertical", "Other")
+        verticals.setdefault(v, []).append(p)
+
+    # Count google ties
+    google_tie_count = sum(
+        1 for p in people
+        if p.get("google_tie", "").lower() != "none found"
+    )
+
+    # Build stat cards
+    stats_html = f"""
+    <td style="width:33%;padding:0 8px;">
+      <div style="background:#f9f9f9;border-radius:12px;padding:20px 24px;">
+        <div style="font-size:32px;font-weight:700;color:#000;letter-spacing:-1px;">{len(people)}</div>
+        <div style="font-size:13px;color:#888;margin-top:4px;font-weight:500;">Targets this week</div>
+      </div>
+    </td>
+    <td style="width:33%;padding:0 8px;">
+      <div style="background:#f9f9f9;border-radius:12px;padding:20px 24px;">
+        <div style="font-size:32px;font-weight:700;color:#000;letter-spacing:-1px;">{len(verticals)}</div>
+        <div style="font-size:13px;color:#888;margin-top:4px;font-weight:500;">Verticals covered</div>
+      </div>
+    </td>
+    <td style="width:33%;padding:0 8px;">
+      <div style="background:#f9f9f9;border-radius:12px;padding:20px 24px;">
+        <div style="font-size:32px;font-weight:700;color:#000;letter-spacing:-1px;">{google_tie_count}</div>
+        <div style="font-size:13px;color:#888;margin-top:4px;font-weight:500;">Existing Google ties</div>
+      </div>
+    </td>
+    """
+
+    # Build vertical sections
+    sections_html = ""
+    for vertical, members in verticals.items():
+        rows = ""
+        for p in members:
+            google = p.get("google_tie", "None found")
+            has_tie = google.lower() != "none found"
+
+            google_html = f"""
+                <div style="font-size:11px;font-weight:600;color:#1a73e8;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">GOOGLE TIE</div>
+                <div style="font-size:13px;color:{'#333' if has_tie else '#aaa'};">{google}</div>
+            """ if has_tie else f"""
+                <div style="font-size:11px;font-weight:600;color:#aaa;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">GOOGLE TIE</div>
+                <div style="font-size:13px;color:#aaa;">None found</div>
+            """
+
+            signal = p.get("signal", "")
+            # Try to extract a source name from the signal (before first period or comma)
+            signal_parts = signal.split(" discussing ") if " discussing " in signal else [signal, ""]
+            signal_source = signal_parts[0].strip() if signal_parts else signal
+            signal_detail = signal_parts[1].strip() if len(signal_parts) > 1 else ""
+
+            rows += f"""
+            <tr>
+              <td style="padding:20px 24px;border-bottom:1px solid #f0f0f0;vertical-align:top;width:28%;">
+                <div style="font-size:15px;font-weight:600;color:#000;margin-bottom:3px;">{p.get("name","")}</div>
+                <div style="font-size:13px;color:#555;margin-bottom:3px;">{p.get("title","")}</div>
+                <div style="font-size:13px;font-weight:500;color:#000;">{p.get("company","")}</div>
+                <div style="display:inline-block;margin-top:8px;padding:3px 10px;background:#f0f0f0;border-radius:20px;font-size:11px;color:#666;font-weight:500;">{p.get("vertical","")}</div>
+              </td>
+              <td style="padding:20px 24px;border-bottom:1px solid #f0f0f0;vertical-align:top;width:30%;">
+                {google_html}
+              </td>
+              <td style="padding:20px 24px;border-bottom:1px solid #f0f0f0;vertical-align:top;width:42%;">
+                <div style="font-size:11px;font-weight:600;color:#888;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">SIGNAL</div>
+                <div style="font-size:13px;color:#1a73e8;font-weight:500;margin-bottom:4px;">{signal_source}</div>
+                {"<div style='font-size:13px;color:#444;line-height:1.5;'>" + signal_detail + "</div>" if signal_detail else "<div style='font-size:13px;color:#444;line-height:1.5;'>" + signal + "</div>"}
+              </td>
+            </tr>"""
+
+        sections_html += f"""
+        <div style="margin-bottom:32px;">
+          <div style="padding:0 0 12px 0;margin-bottom:0;border-bottom:2px solid #000;">
+            <span style="font-size:17px;font-weight:700;color:#000;letter-spacing:-0.3px;">{vertical}</span>
+          </div>
+          <table style="width:100%;border-collapse:collapse;">
+            {rows}
+          </table>
+        </div>
+        """
 
     return f"""<!DOCTYPE html>
 <html>
-<head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
 </head>
-<body style="margin:0;padding:0;background:#f4f4f4;font-family:Arial,sans-serif;">
-<div style="max-width:960px;margin:24px auto;background:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.1);">
+<body style="margin:0;padding:0;background:#ffffff;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',sans-serif;">
 
-  <div style="background:#1a73e8;padding:24px 32px;">
-    <h1 style="margin:0;color:#ffffff;font-size:22px;font-weight:600;">CapitalG Scout</h1>
-    <p style="margin:6px 0 0;color:#e8f0fe;font-size:14px;">{today} &nbsp;&middot;&nbsp; {len(people)} targets this week</p>
-  </div>
+  <div style="max-width:720px;margin:0 auto;padding:48px 24px 64px;">
 
-  <div style="padding:24px 32px;overflow-x:auto;">
-    <table style="width:100%;border-collapse:collapse;font-size:14px;color:#333;">
-      <thead>
-        <tr style="background:#f8f9fa;">
-          <th style="padding:12px 16px;text-align:left;border-bottom:2px solid #e0e0e0;white-space:nowrap;">Name</th>
-          <th style="padding:12px 16px;text-align:left;border-bottom:2px solid #e0e0e0;">Title</th>
-          <th style="padding:12px 16px;text-align:left;border-bottom:2px solid #e0e0e0;">Company</th>
-          <th style="padding:12px 16px;text-align:left;border-bottom:2px solid #e0e0e0;">Vertical</th>
-          <th style="padding:12px 16px;text-align:left;border-bottom:2px solid #e0e0e0;">Google Tie</th>
-          <th style="padding:12px 16px;text-align:left;border-bottom:2px solid #e0e0e0;">Signal</th>
-        </tr>
-      </thead>
-      <tbody>{rows}</tbody>
+    <!-- Header -->
+    <div style="margin-bottom:40px;padding-bottom:32px;border-bottom:1px solid #e8e8e8;">
+      <div style="font-size:13px;font-weight:600;color:#1a73e8;letter-spacing:0.5px;text-transform:uppercase;margin-bottom:12px;">CapitalG Scout</div>
+      <h1 style="margin:0 0 8px;font-size:34px;font-weight:700;color:#000;letter-spacing:-1px;line-height:1.1;">This week's targets.</h1>
+      <p style="margin:0;font-size:16px;color:#888;line-height:1.5;">
+        {len(people)} executive prospects surfaced through podcast<br>appearances, industry honors, and conference activity.
+      </p>
+      <p style="margin:16px 0 0;font-size:13px;color:#bbb;">{today}</p>
+    </div>
+
+    <!-- Stats -->
+    <table style="width:100%;border-collapse:collapse;margin-bottom:48px;">
+      <tr>{stats_html}</tr>
     </table>
+
+    <!-- Vertical Sections -->
+    {sections_html}
+
+    <!-- Footer -->
+    <div style="margin-top:48px;padding-top:24px;border-top:1px solid #e8e8e8;">
+      <p style="margin:0;font-size:12px;color:#bbb;">Sent automatically every Sunday · CapitalG Scout</p>
+    </div>
+
   </div>
 
-  <div style="padding:16px 32px;border-top:1px solid #e0e0e0;background:#f8f9fa;">
-    <p style="margin:0;color:#999;font-size:12px;">Sent automatically every Sunday by CapitalG Scout.</p>
-  </div>
-
-</div>
 </body>
 </html>"""
 
@@ -210,7 +283,6 @@ def main():
     for i, p in enumerate(people, 1):
         print(f"  {i:02d}. {p.get('name')} — {p.get('title')} at {p.get('company')}")
 
-    # Send email directly via Gmail SMTP
     gmail_user = os.environ.get("GMAIL_USERNAME")
     gmail_password = os.environ.get("GMAIL_APP_PASSWORD")
     if gmail_user and gmail_password:
