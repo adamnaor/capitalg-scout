@@ -29,9 +29,8 @@ PRIORITIZE these verticals:
 
 For each person, research and note their company's Google connection. This includes Google Cloud, Workspace, Vertex AI, BigQuery, Google Maps, Android Enterprise, YouTube, data center energy deals, or any Google partnership. Every major F1000 company uses at least one Google product — find it.
 
- such as Google Cloud customer,
-Google Cloud Next speaker, Vertex AI or BigQuery partnership.
 You must find a Google connection for every person. Every large F1000 company has some relationship with Google — search for Google Cloud usage, Workspace adoption, Android Enterprise, Google Maps Platform, YouTube advertising, data center partnerships, or any Google product. Be thorough. Only write "None confirmed" if after searching you truly find zero evidence of any Google product or partnership.
+
 Return ONLY a JSON array. Your entire response must be valid JSON.
 Start with [ and end with ]. No text before or after. No markdown fences.
 
@@ -144,7 +143,7 @@ def format_html(people):
     # Count google ties
     google_tie_count = sum(
         1 for p in people
-        if p.get("google_tie", "").lower() != "none found"
+        if p.get("google_tie", "").lower() not in ("none found", "none confirmed")
     )
 
     # Build stat cards
@@ -175,21 +174,26 @@ def format_html(people):
         rows = ""
         for p in members:
             google = p.get("google_tie", "None found")
-            has_tie = google.lower() != "none found"
+            has_tie = google.lower() not in ("none found", "none confirmed")
 
             google_html = f"""
                 <div style="font-size:11px;font-weight:600;color:#1a73e8;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">GOOGLE TIE</div>
                 <div style="font-size:13px;color:{'#333' if has_tie else '#aaa'};">{google}</div>
-            """ if has_tie else f"""
-                <div style="font-size:11px;font-weight:600;color:#aaa;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">GOOGLE TIE</div>
-                <div style="font-size:13px;color:#aaa;">None found</div>
             """
 
             signal = p.get("signal", "")
-            # Try to extract a source name from the signal (before first period or comma)
-            signal_parts = signal.split(" discussing ") if " discussing " in signal else [signal, ""]
-            signal_source = signal_parts[0].strip() if signal_parts else signal
-            signal_detail = signal_parts[1].strip() if len(signal_parts) > 1 else ""
+            # Split signal into source line and detail — avoid duplicating content
+            if " discussing " in signal:
+                parts = signal.split(" discussing ", 1)
+                signal_source = parts[0].strip()
+                signal_detail = parts[1].strip()
+            elif "; " in signal:
+                parts = signal.split("; ", 1)
+                signal_source = parts[0].strip()
+                signal_detail = parts[1].strip()
+            else:
+                signal_source = signal.strip()
+                signal_detail = ""
 
             rows += f"""
             <tr>
@@ -205,7 +209,7 @@ def format_html(people):
               <td style="padding:20px 24px;border-bottom:1px solid #f0f0f0;vertical-align:top;width:42%;">
                 <div style="font-size:11px;font-weight:600;color:#888;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">SIGNAL</div>
                 <div style="font-size:13px;color:#1a73e8;font-weight:500;margin-bottom:4px;">{signal_source}</div>
-                {"<div style='font-size:13px;color:#444;line-height:1.5;'>" + signal_detail + "</div>" if signal_detail else "<div style='font-size:13px;color:#444;line-height:1.5;'>" + signal + "</div>"}
+                {"<div style='font-size:13px;color:#444;line-height:1.5;'>" + signal_detail + "</div>" if signal_detail else ""}
               </td>
             </tr>"""
 
