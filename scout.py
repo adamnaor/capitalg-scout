@@ -27,10 +27,11 @@ PRIORITIZE these verticals:
 - Aerospace and defense
 - Retail and consumer
 
-For each person, note any Google connection such as Google Cloud customer,
-Google Cloud Next speaker, Vertex AI or BigQuery partnership.
-If none found write: None found.
+For each person, research and note their company's Google connection. This includes Google Cloud, Workspace, Vertex AI, BigQuery, Google Maps, Android Enterprise, YouTube, data center energy deals, or any Google partnership. Every major F1000 company uses at least one Google product — find it.
 
+ such as Google Cloud customer,
+Google Cloud Next speaker, Vertex AI or BigQuery partnership.
+You must find a Google connection for every person. Every large F1000 company has some relationship with Google — search for Google Cloud usage, Workspace adoption, Android Enterprise, Google Maps Platform, YouTube advertising, data center partnerships, or any Google product. Be thorough. Only write "None confirmed" if after searching you truly find zero evidence of any Google product or partnership.
 Return ONLY a JSON array. Your entire response must be valid JSON.
 Start with [ and end with ]. No text before or after. No markdown fences.
 
